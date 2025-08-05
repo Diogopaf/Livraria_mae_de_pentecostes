@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Livraria Mãe de Pentecostes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .tab-button.active {
+            border-bottom-color: #ef4444; /* red-500 */
+            color: #ef4444; /* red-500 */
+        }
+        .modal { display: none; }
+        .modal.show { display: flex; }
+        #loading-overlay {
+            transition: opacity 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="antialiased text-gray-800">
+
+    <!-- Tela de Carregamento Inicial -->
+    <div id="loading-overlay" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
+        <i class="fas fa-book fa-spin text-5xl text-red-500"></i>
+        <p class="mt-4 text-lg text-gray-600">Carregando dados...</p>
+    </div>
+
+    <div id="app" class="container mx-auto p-4 md:p-6 max-w-7xl opacity-0 transition-opacity duration-500">
+
+        <!-- Cabeçalho -->
+        <header class="mb-6 flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center space-x-3 mb-4 md:mb-0">
+                <i class="fas fa-book-open-reader text-3xl text-red-500"></i>
+                <h1 class="text-3xl font-bold text-gray-800">Livraria Mãe de Pentecostes</h1>
+            </div>
+            <button onclick="openNewSaleModal()" class="w-full md:w-auto bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105 flex items-center justify-center space-x-2">
+                <i class="fas fa-plus-circle"></i>
+                <span>Nova Venda</span>
+            </button>
+        </header>
+
+        <!-- Abas de Navegação -->
+        <div class="border-b border-gray-200 mb-6">
+            <nav class="flex -mb-px space-x-6" aria-label="Tabs">
+                <button onclick="changeTab('sales')" class="tab-button active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg">
+                    <i class="fas fa-cash-register mr-2"></i>Vendas Abertas
+                </button>
+                <button onclick="changeTab('catalog')" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                    <i class="fas fa-book-bookmark mr-2"></i>Catálogo
+                </button>
+                <button onclick="changeTab('history')" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                    <i class="fas fa-history mr-2"></i>Histórico de Vendas
+                </button>
+            </nav>
+        </div>
+
+        <!-- Conteúdo das Abas -->
+        <main>
+            <div id="sales-tab" class="space-y-4">
+                <div id="sales-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                <div id="no-sales" class="hidden text-center py-16"><i class="fas fa-receipt text-5xl text-gray-300 mb-4"></i><h3 class="text-xl font-medium text-gray-500">Nenhuma venda em aberto.</h3></div>
+            </div>
+            <div id="catalog-tab" class="hidden">
+                <div class="flex justify-end mb-4">
+                    <button onclick="openBookModal()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-md"><i class="fas fa-plus"></i><span> Adicionar Livro</span></button>
+                </div>
+                <div id="catalog-list" class="bg-white rounded-lg shadow-md overflow-hidden"></div>
+                <div id="no-catalog" class="hidden text-center py-16"><i class="fas fa-book-open text-5xl text-gray-300 mb-4"></i><h3 class="text-xl font-medium text-gray-500">O catálogo está vazio.</h3></div>
+            </div>
+            <div id="history-tab" class="hidden space-y-4">
+                <div id="history-list" class="space-y-4"></div>
+                <div id="no-history" class="hidden text-center py-16"><i class="fas fa-archive text-5xl text-gray-300 mb-4"></i><h3 class="text-xl font-medium text-gray-500">Nenhuma venda finalizada.</h3></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modais -->
+    <div id="book-modal" class="modal fixed inset-0 bg-gray-900 bg-opacity-50 items-center justify-center p-4"><div class="bg-white rounded-lg shadow-2xl w-full max-w-md p-6"><h2 id="book-modal-title" class="text-2xl font-bold mb-4">Adicionar Livro</h2><form id="book-form"><input type="hidden" id="edit-book-id"><div class="mb-4"><label for="book-title" class="block text-sm font-medium text-gray-700 mb-1">Título do Livro</label><input type="text" id="book-title" class="w-full px-3 py-2 border border-gray-300 rounded-md" required></div><div class="mb-4"><label for="book-price" class="block text-sm font-medium text-gray-700 mb-1">Preço (R$)</label><input type="number" id="book-price" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md" required></div><div class="flex justify-end space-x-3"><button type="button" onclick="closeBookModal()" class="bg-gray-200 hover:bg-gray-300 py-2 px-4 rounded-lg">Cancelar</button><button type="submit" class="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg">Salvar</button></div></form></div></div>
+    <div id="new-sale-modal" class="modal fixed inset-0 bg-gray-900 bg-opacity-50 items-center justify-center p-4"><div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl p-6 flex flex-col" style="max-height: 90vh;"><h2 class="text-2xl font-bold mb-4">Nova Venda</h2><div id="sale-catalog-list" class="flex-grow overflow-y-auto pr-2 -mr-2 space-y-3 mb-4"></div><div class="mt-2 mb-4"><label for="sale-observation" class="block text-sm font-medium">Observações:</label><textarea id="sale-observation" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="Ex: Embrulhar para presente..."></textarea></div><div class="border-t pt-4"><div class="flex justify-between items-center mb-4"><span class="text-lg font-medium">Total:</span><span id="sale-total" class="text-2xl font-bold text-red-600">R$ 0,00</span></div><div class="flex justify-end space-x-3"><button type="button" onclick="closeNewSaleModal()" class="bg-gray-200 hover:bg-gray-300 py-2 px-4 rounded-lg">Cancelar</button><button type="button" onclick="createSale()" class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg">Criar Venda</button></div></div></div></div>
+    <div id="edit-sale-modal" class="modal fixed inset-0 bg-gray-900 bg-opacity-50 items-center justify-center p-4"><div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl p-6 flex flex-col" style="max-height: 90vh;"><h2 id="edit-sale-modal-title" class="text-2xl font-bold mb-4">Editar Venda</h2><input type="hidden" id="edit-sale-id"><div id="edit-sale-catalog-list" class="flex-grow overflow-y-auto pr-2 -mr-2 space-y-3 mb-4"></div><div class="mt-2 mb-4"><label for="edit-sale-observation" class="block text-sm font-medium">Observações:</label><textarea id="edit-sale-observation" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="Ex: Embrulhar para presente..."></textarea></div><div class="border-t pt-4"><div class="flex justify-between items-center mb-4"><span class="text-lg font-medium">Total:</span><span id="edit-sale-total" class="text-2xl font-bold text-red-600">R$ 0,00</span></div><div class="flex justify-end space-x-3"><button type="button" onclick="closeEditSaleModal()" class="bg-gray-200 hover:bg-gray-300 py-2 px-4 rounded-lg">Cancelar</button><button type="button" onclick="saveSaleChanges()" class="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg">Salvar Alterações</button></div></div></div></div>
+    <div id="payment-modal" class="modal fixed inset-0 bg-gray-900 bg-opacity-50 items-center justify-center p-4"><div class="bg-white rounded-lg shadow-2xl w-full max-w-sm p-6"><h2 class="text-2xl font-bold mb-4">Finalizar Pagamento</h2><input type="hidden" id="payment-sale-id"><div class="mb-4"><label for="payment-method" class="block text-sm font-medium">Forma de Pagamento</label><select id="payment-method" class="w-full px-3 py-2 border border-gray-300 rounded-md"><option>Dinheiro</option><option>Cartão de Crédito</option><option>Cartão de Débito</option><option>PIX</option></select></div><div class="flex justify-end space-x-3"><button type="button" onclick="closePaymentModal()" class="bg-gray-200 hover:bg-gray-300 py-2 px-4 rounded-lg">Cancelar</button><button type="button" onclick="finalizeSale()" class="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg">Confirmar</button></div></div></div>
+    <div id="delete-confirm-modal" class="modal fixed inset-0 bg-gray-900 bg-opacity-50 items-center justify-center p-4"><div class="bg-white rounded-lg shadow-2xl w-full max-w-sm p-6 text-center"><i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i><h2 class="text-xl font-bold mb-2">Confirmar Exclusão</h2><p class="text-gray-600 mb-6">Esta ação não pode ser desfeita.</p><input type="hidden" id="delete-item-id"><div class="flex justify-center space-x-4"><button type="button" onclick="closeDeleteConfirmModal()" class="bg-gray-200 hover:bg-gray-300 py-2 px-6 rounded-lg">Cancelar</button><button type="button" onclick="confirmDeleteBook()" class="bg-red-500 hover:bg-red-600 text-white py-2 px-6 rounded-lg">Excluir</button></div></div></div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, getDocs, limit } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+        // A mesma configuração do Firebase pode ser usada.
+        // Novas coleções ('catalog', 'sales') serão criadas automaticamente.
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZaaGTQqUKDoVSlgiaP_ILICc0hlA9E6Q",
+            authDomain: "app-lanchonete-sh82.firebaseapp.com",
+            projectId: "app-lanchonete-sh82",
+            storageBucket: "app-lanchonete-sh82.firebasestorage.app",
+            messagingSenderId: "924589870127",
+            appId: "1:924589870127:web:e8a805a6a5b7b945328ada",
+            measurementId: "G-3585VFX9MX"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const catalogCollection = collection(db, 'catalog');
+        const salesCollection = collection(db, 'sales');
+
+        let localState = {
+            catalog: [],
+            sales: [],
+            activeTab: 'sales'
+        };
+
+        onSnapshot(query(catalogCollection, orderBy("title")), (snapshot) => {
+            localState.catalog = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderCatalog();
+            hideLoadingOverlay();
+        });
+
+        onSnapshot(query(salesCollection, orderBy("createdAt", "desc")), (snapshot) => {
+            localState.sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderOpenSales(localState.sales);
+            renderSalesHistory(localState.sales);
+            checkEmptyStates(localState.sales);
+        });
+
+        function renderCatalog() {
+            const list = document.getElementById('catalog-list');
+            list.innerHTML = '';
+            if (localState.catalog.length === 0) return;
+            const table = document.createElement('table');
+            table.className = 'w-full text-sm text-left text-gray-500';
+            table.innerHTML = `<thead class="text-xs text-gray-700 uppercase bg-gray-50"><tr><th class="px-6 py-3">Título</th><th class="px-6 py-3">Preço</th><th class="px-6 py-3 text-right">Ações</th></tr></thead><tbody></tbody>`;
+            const tbody = table.querySelector('tbody');
+            localState.catalog.forEach(book => {
+                const tr = document.createElement('tr');
+                tr.className = 'bg-white border-b hover:bg-gray-50';
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-medium text-gray-900">${book.title}</td>
+                    <td class="px-6 py-4">R$ ${book.price.toFixed(2).replace('.', ',')}</td>
+                    <td class="px-6 py-4 text-right space-x-2">
+                        <button onclick="window.openBookModal('${book.id}')" class="text-red-600 hover:text-red-800"><i class="fas fa-edit"></i></button>
+                        <button onclick="window.openDeleteConfirmModal('${book.id}')" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
+                    </td>`;
+                tbody.appendChild(tr);
+            });
+            list.appendChild(table);
+        }
+
+        function renderOpenSales(allSales) {
+            const list = document.getElementById('sales-list');
+            list.innerHTML = '';
+            const openSales = allSales.filter(s => s.status === 'aberta');
+            openSales.forEach(sale => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-lg shadow-md p-5 flex flex-col';
+                const itemsHtml = sale.items.map(item => `<li class="flex justify-between"><span>${item.quantity}x ${item.title}</span><span>R$ ${(item.quantity * item.price).toFixed(2).replace('.', ',')}</span></li>`).join('');
+                let observationHtml = sale.observation ? `<div class="mt-3 pt-3 border-t border-dashed"><p class="text-sm font-semibold"><i class="fas fa-comment-dots mr-2 text-yellow-500"></i>Observação:</p><p class="text-sm text-gray-600 pl-5 whitespace-pre-wrap">${sale.observation}</p></div>` : '';
+                const saleDate = sale.createdAt ? new Date(sale.createdAt.toDate()).toLocaleString('pt-BR') : 'Processando...';
+                card.innerHTML = `
+                    <div class="flex-grow">
+                        <div class="flex justify-between items-start mb-3">
+                            <h3 class="text-xl font-bold">Venda #${sale.saleNumber}</h3>
+                            <span class="text-xs text-gray-500">${saleDate}</span>
+                        </div>
+                        <ul class="space-y-1 text-gray-600 mb-4">${itemsHtml}</ul>
+                        ${observationHtml}
+                        <div class="flex justify-between items-center font-bold text-lg mt-4 border-t pt-3"><span>Total:</span><span>R$ ${sale.total.toFixed(2).replace('.', ',')}</span></div>
+                    </div>
+                    <div class="mt-4 flex space-x-2">
+                        <button onclick="window.openEditSaleModal('${sale.id}')" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center space-x-2"><i class="fas fa-pencil-alt"></i><span>Editar</span></button>
+                        <button onclick="window.openPaymentModal('${sale.id}')" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center space-x-2"><i class="fas fa-check-circle"></i><span>Pagar</span></button>
+                    </div>`;
+                list.appendChild(card);
+            });
+        }
+
+        function renderSalesHistory(allSales) {
+            const list = document.getElementById('history-list');
+            list.innerHTML = '';
+            const paidSales = allSales.filter(s => s.status === 'pago');
+            paidSales.forEach(sale => {
+                const item = document.createElement('div');
+                item.className = 'bg-white rounded-lg shadow-sm p-4 border';
+                const itemsHtml = sale.items.map(i => `${i.quantity}x ${i.title}`).join(', ');
+                let observationHtml = sale.observation ? `<p class="text-xs text-gray-500 mt-1 italic"><i class="fas fa-comment-dots mr-1"></i>${sale.observation}</p>` : '';
+                const saleDate = sale.createdAt ? new Date(sale.createdAt.toDate()).toLocaleString('pt-BR') : 'N/A';
+                item.innerHTML = `
+                    <div class="flex flex-col md:flex-row justify-between items-start">
+                        <div>
+                            <p class="font-bold">Venda #${sale.saleNumber}</p>
+                            <p class="text-sm text-gray-600">${itemsHtml}</p>${observationHtml}
+                        </div>
+                        <div class="text-left md:text-right mt-2 md:mt-0">
+                            <p class="font-semibold text-lg text-green-600">R$ ${sale.total.toFixed(2).replace('.', ',')}</p>
+                            <p class="text-xs text-gray-500">${sale.paymentMethod} - ${saleDate}</p>
+                        </div>
+                    </div>`;
+                list.appendChild(item);
+            });
+        }
+        
+        window.saveBook = async () => {
+            const id = document.getElementById('edit-book-id').value;
+            const title = document.getElementById('book-title').value;
+            const price = parseFloat(document.getElementById('book-price').value);
+            if (!title || isNaN(price)) return;
+            if (id) { await updateDoc(doc(db, 'catalog', id), { title, price }); } 
+            else { await addDoc(catalogCollection, { title, price }); }
+            closeBookModal();
+        }
+
+        window.confirmDeleteBook = async () => {
+            const id = document.getElementById('delete-item-id').value;
+            await deleteDoc(doc(db, 'catalog', id));
+            closeDeleteConfirmModal();
+        }
+
+        window.createSale = async () => {
+            const items = [];
+            document.querySelectorAll('#new-sale-modal .sale-item-quantity').forEach(input => {
+                const quantity = parseInt(input.value);
+                if (quantity > 0) {
+                    const id = input.dataset.id;
+                    const bookItem = localState.catalog.find(i => i.id === id);
+                    items.push({ id: bookItem.id, title: bookItem.title, price: bookItem.price, quantity: quantity });
+                }
+            });
+            if (items.length === 0) { alert('Selecione pelo menos um livro.'); return; }
+            const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const observation = document.getElementById('sale-observation').value.trim();
+            const lastSaleQuery = query(salesCollection, orderBy("saleNumber", "desc"), limit(1));
+            const querySnapshot = await getDocs(lastSaleQuery);
+            const lastSaleNumber = querySnapshot.empty ? 0 : querySnapshot.docs[0].data().saleNumber;
+            await addDoc(salesCollection, { items, total, observation, status: 'aberta', createdAt: serverTimestamp(), saleNumber: lastSaleNumber + 1 });
+            closeNewSaleModal();
+            changeTab('sales');
+        }
+        
+        window.saveSaleChanges = async () => {
+            const saleId = document.getElementById('edit-sale-id').value;
+            const items = [];
+            document.querySelectorAll('#edit-sale-modal .sale-item-quantity').forEach(input => {
+                const quantity = parseInt(input.value);
+                if (quantity > 0) {
+                    const id = input.dataset.id;
+                    const bookItem = localState.catalog.find(i => i.id === id);
+                    items.push({ id: bookItem.id, title: bookItem.title, price: bookItem.price, quantity: quantity });
+                }
+            });
+             if (items.length === 0) { alert('A venda não pode ficar vazia.'); return; }
+            const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const observation = document.getElementById('edit-sale-observation').value.trim();
+            
+            await updateDoc(doc(db, 'sales', saleId), { items, total, observation });
+            closeEditSaleModal();
+        }
+
+        window.finalizeSale = async () => {
+            const saleId = document.getElementById('payment-sale-id').value;
+            const paymentMethod = document.getElementById('payment-method').value;
+            await updateDoc(doc(db, 'sales', saleId), { status: 'pago', paymentMethod });
+            closePaymentModal();
+        }
+        
+        function hideLoadingOverlay() {
+            const overlay = document.getElementById('loading-overlay');
+            const appDiv = document.getElementById('app');
+            if (overlay.style.opacity !== '0') {
+                overlay.style.opacity = '0';
+                appDiv.style.opacity = '1';
+                setTimeout(() => { overlay.style.display = 'none'; }, 300);
+            }
+        }
+
+        function checkEmptyStates(allSales) {
+            document.getElementById('no-sales').style.display = allSales.filter(s => s.status === 'aberta').length === 0 ? 'block' : 'none';
+            document.getElementById('no-catalog').style.display = localState.catalog.length === 0 ? 'block' : 'none';
+            document.getElementById('no-history').style.display = allSales.filter(s => s.status === 'pago').length === 0 ? 'block' : 'none';
+        }
+
+        function changeTab(tabName) {
+            localState.activeTab = tabName;
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`.tab-button[onclick="changeTab('${tabName}')"]`).classList.add('active');
+            ['sales-tab', 'catalog-tab', 'history-tab'].forEach(id => {
+                document.getElementById(id).style.display = id.startsWith(tabName) ? 'block' : 'none';
+            });
+        }
+        window.changeTab = changeTab;
+        
+        window.openBookModal = (id = null) => {
+            const form = document.getElementById('book-form');
+            form.reset();
+            form.onsubmit = (e) => { e.preventDefault(); window.saveBook(); };
+            document.getElementById('edit-book-id').value = '';
+            if (id) {
+                const book = localState.catalog.find(i => i.id === id);
+                document.getElementById('book-modal-title').textContent = 'Editar Livro';
+                document.getElementById('edit-book-id').value = id;
+                document.getElementById('book-title').value = book.title;
+                document.getElementById('book-price').value = book.price.toFixed(2);
+            } else {
+                document.getElementById('book-modal-title').textContent = 'Adicionar Livro';
+            }
+            document.getElementById('book-modal').classList.add('show');
+        }
+        window.closeBookModal = () => document.getElementById('book-modal').classList.remove('show');
+        window.openDeleteConfirmModal = (id) => { document.getElementById('delete-item-id').value = id; document.getElementById('delete-confirm-modal').classList.add('show'); }
+        window.closeDeleteConfirmModal = () => document.getElementById('delete-confirm-modal').classList.remove('show');
+        window.openNewSaleModal = () => {
+            const list = document.getElementById('sale-catalog-list');
+            list.innerHTML = '';
+            document.getElementById('sale-observation').value = '';
+            if (localState.catalog.length === 0) { list.innerHTML = `<p class="text-center text-gray-500">Adicione livros ao catálogo primeiro.</p>`; }
+            else {
+                localState.catalog.forEach(book => {
+                    list.innerHTML += `<div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg"><div><p class="font-medium">${book.title}</p><p class="text-sm text-gray-500">R$ ${book.price.toFixed(2).replace('.', ',')}</p></div><div class="flex items-center space-x-3"><button onclick="this.nextElementSibling.stepDown(); window.updateSaleTotal('#new-sale-modal')" class="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 text-lg font-bold">-</button><input type="number" data-price="${book.price}" data-id="${book.id}" value="0" min="0" class="sale-item-quantity w-12 text-center font-bold border-gray-300 rounded-md" onchange="window.updateSaleTotal('#new-sale-modal')"><button onclick="this.previousElementSibling.stepUp(); window.updateSaleTotal('#new-sale-modal')" class="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 text-lg font-bold">+</button></div></div>`;
+                });
+            }
+            window.updateSaleTotal('#new-sale-modal');
+            document.getElementById('new-sale-modal').classList.add('show');
+        }
+        window.closeNewSaleModal = () => document.getElementById('new-sale-modal').classList.remove('show');
+        
+        window.openEditSaleModal = (saleId) => {
+            const sale = localState.sales.find(s => s.id === saleId);
+            if (!sale) return;
+            
+            document.getElementById('edit-sale-modal-title').textContent = `Editar Venda #${sale.saleNumber}`;
+            document.getElementById('edit-sale-id').value = saleId;
+            document.getElementById('edit-sale-observation').value = sale.observation || '';
+            
+            const list = document.getElementById('edit-sale-catalog-list');
+            list.innerHTML = '';
+            
+            localState.catalog.forEach(book => {
+                const saleItem = sale.items.find(si => si.id === book.id);
+                const quantity = saleItem ? saleItem.quantity : 0;
+                list.innerHTML += `<div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg"><div><p class="font-medium">${book.title}</p><p class="text-sm text-gray-500">R$ ${book.price.toFixed(2).replace('.', ',')}</p></div><div class="flex items-center space-x-3"><button onclick="this.nextElementSibling.stepDown(); window.updateSaleTotal('#edit-sale-modal')" class="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 text-lg font-bold">-</button><input type="number" data-price="${book.price}" data-id="${book.id}" value="${quantity}" min="0" class="sale-item-quantity w-12 text-center font-bold border-gray-300 rounded-md" onchange="window.updateSaleTotal('#edit-sale-modal')"><button onclick="this.previousElementSibling.stepUp(); window.updateSaleTotal('#edit-sale-modal')" class="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 text-lg font-bold">+</button></div></div>`;
+            });
+            
+            window.updateSaleTotal('#edit-sale-modal');
+            document.getElementById('edit-sale-modal').classList.add('show');
+        }
+        window.closeEditSaleModal = () => document.getElementById('edit-sale-modal').classList.remove('show');
+
+        window.openPaymentModal = (saleId) => { document.getElementById('payment-sale-id').value = saleId; document.getElementById('payment-modal').classList.add('show'); }
+        window.closePaymentModal = () => document.getElementById('payment-modal').classList.remove('show');
+        
+        window.updateSaleTotal = (modalSelector) => {
+            const modalElement = document.querySelector(modalSelector);
+            if (!modalElement) return;
+
+            let total = 0;
+            modalElement.querySelectorAll('.sale-item-quantity').forEach(input => {
+                total += parseInt(input.value) * parseFloat(input.dataset.price);
+            });
+
+            const totalSpan = modalElement.querySelector('[id$="-total"]');
+            if (totalSpan) {
+                totalSpan.textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
+            }
+        }
+
+    </script>
+</body>
+</html>
+
